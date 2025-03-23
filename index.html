@@ -25,10 +25,6 @@
       background-color: #d4edda;
       color: #155724;
     }
-    .warning {
-      background-color: #fff3cd;
-      color: #856404;
-    }
     .error {
       background-color: #f8d7da;
       color: #721c24;
@@ -41,58 +37,56 @@
   <div id="status" class="status"></div>
 
   <script>
-    const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSfQ4tCvUfVZHwxApztR4JtCz81_nFr74tKvfMwLxCJcH8m1pw/formResponse";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbz1QstYwLoJt8ZqDjvJ0ZUoAnJ_IbzpwXQmFYvm7gEZ__qigWNp5V65has2LhhUXEA6/exec";
 
     function showStatus(message, type) {
-      const statusDiv = document.getElementById("status");
-      statusDiv.textContent = message;
-      statusDiv.className = `status $<class 'type'>`;
+      const status = document.getElementById("status");
+      status.textContent = message;
+      status.className = "status " + type;
     }
 
-    function registerAttendance(data) {
+    function register(data) {
       const now = new Date();
       const fecha = now.toLocaleDateString("es-CL");
       const hora = now.toLocaleTimeString("es-CL");
 
       const match = data.match(/ID:(\d+)\|Nombre:(.*?)\|Curso:(.*)/);
       if (!match) {
-        showStatus("QR no válido.", "error");
+        showStatus("❌ QR no válido", "error");
         return;
       }
 
       const [_, id, nombre, curso] = match;
 
       const formData = new FormData();
-      formData.append("entry.1489766334", fecha);
-      formData.append("entry.1212883158", hora);
-      formData.append("entry.1612828966", id);
-      formData.append("entry.205693882", nombre);
-      formData.append("entry.1993524359", curso);
+      formData.append("fecha", fecha);
+      formData.append("hora", hora);
+      formData.append("id", id);
+      formData.append("nombre", nombre);
+      formData.append("curso", curso);
 
-      fetch(formURL, {
+      fetch(scriptURL, {
         method: "POST",
-        mode: "no-cors",
-        body: formData
+        body: formData,
       }).then(() => {
         showStatus("✅ Pase registrado correctamente", "success");
-      }).catch((err) => {
-        showStatus("❌ No se pudo registrar. Intente nuevamente.", "error");
+      }).catch(() => {
+        showStatus("❌ Error al registrar", "error");
       });
     }
 
     const html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: 250 };
-
-    html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-      html5QrCode.stop();
-      registerAttendance(decodedText);
-      setTimeout(() => {
-        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-          html5QrCode.stop();
-          registerAttendance(decodedText);
-        });
-      }, 3000);
-    });
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      (decodedText) => {
+        html5QrCode.stop();
+        register(decodedText);
+        setTimeout(() => {
+          html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, register);
+        }, 3000);
+      }
+    );
   </script>
 </body>
 </html>
